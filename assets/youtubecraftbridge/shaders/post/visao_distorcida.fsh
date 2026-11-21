@@ -1,26 +1,27 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-uniform sampler2D In;
-uniform vec2 ScreenSize;
-uniform float GameTime;
+#include <minecraft:globals.glsl>
+
+uniform sampler2D InSampler;
 
 layout(location = 0) in vec2 texCoord;
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
 layout(location = 0) out vec4 fragColor;
 
 void main() {
+    vec2 centered = texCoord - vec2(0.5);
+    float t = GameTime * 900.0;
     vec2 uv = texCoord;
-    vec2 centered = uv - vec2(0.5);
-    float time = GameTime * 1200.0;
-
-    float wave = sin(centered.y * 24.0 + time) * 0.006;
-    float ripple = sin(length(centered) * 34.0 - time * 1.4) * 0.004;
-    uv.x += wave + ripple;
-    uv.y += sin(centered.x * 18.0 + time * 0.8) * 0.003;
-
-    vec4 color = texture(In, clamp(uv, vec2(0.001), vec2(0.999)));
-    float aberration = 0.003 + abs(sin(time * 0.4)) * 0.002;
-    float red = texture(In, clamp(uv + vec2(aberration, 0.0), vec2(0.001), vec2(0.999))).r;
-    float blue = texture(In, clamp(uv - vec2(aberration, 0.0), vec2(0.001), vec2(0.999))).b;
-
-    fragColor = vec4(red, color.g, blue, color.a);
+    uv.x += sin(centered.y * 28.0 + t) * 0.008;
+    uv.y += sin(centered.x * 19.0 - t * 0.8) * 0.004;
+    float split = 0.0025;
+    vec2 redUV = clamp(uv + vec2(split, 0.0), vec2(0.001), vec2(0.999));
+    vec2 blueUV = clamp(uv - vec2(split, 0.0), vec2(0.001), vec2(0.999));
+    vec2 safeUV = clamp(uv, vec2(0.001), vec2(0.999));
+    vec4 base = texture(InSampler, safeUV);
+    fragColor = vec4(texture(InSampler, redUV).r, base.g, texture(InSampler, blueUV).b, base.a);
 }
