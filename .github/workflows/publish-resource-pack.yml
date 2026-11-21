@@ -1,0 +1,85 @@
+name: Publicar Resource Pack
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar-resource-pack
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Gerar ZIP e publicar release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar repositório com histórico e tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calcular próxima versão
+        id: version
+        shell: bash
+        run: |
+          git fetch --force --tags
+
+          CURRENT_TAG="$(git tag --list 'v[0-9]*' --sort=-version:refname | head -n 1)"
+
+          if [[ -z "$CURRENT_TAG" ]]; then
+            NEXT_TAG="v1.0.0"
+            echo "Nenhuma tag semântica encontrada. Primeira versão: $NEXT_TAG"
+          else
+            VERSION="${CURRENT_TAG#v}"
+
+            if [[ ! "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::error::A tag atual '$CURRENT_TAG' não segue o formato vMAJOR.MINOR.PATCH."
+              exit 1
+            fi
+
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+            NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+            echo "::error::A tag $NEXT_TAG já existe. Verifique as tags do repositório."
+            exit 1
+          fi
+
+          echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
+          echo "Versão atual: ${CURRENT_TAG:-nenhuma}"
+          echo "Próxima versão: $NEXT_TAG"
+
+      - name: Criar ZIP do resource pack
+        shell: bash
+        run: |
+          test -f pack.mcmeta || {
+            echo "::error::pack.mcmeta não encontrado na raiz do repositório."
+            exit 1
+          }
+
+          test -d assets || {
+            echo "::error::Pasta assets não encontrada na raiz do repositório."
+            exit 1
+          }
+
+          zip -r YoutubeCraftBridge-ResourcePack.zip pack.mcmeta assets
+
+      - name: Publicar release e anexar ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: YoutubeCraftBridge Resource Pack ${{ steps.version.outputs.tag }}
+          body: |
+            Resource Pack do YoutubeCraftBridge.
+
+            Versão gerada automaticamente pela GitHub Action a partir da última tag publicada.
+          files: YoutubeCraftBridge-ResourcePack.zip
+          draft: false
+          prerelease: false
+          make_latest: true
