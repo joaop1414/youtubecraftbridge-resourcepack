@@ -1,16 +1,20 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-uniform sampler2D In;
-uniform vec2 ScreenSize;
+uniform sampler2D InSampler;
 
 layout(location = 0) in vec2 texCoord;
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
 layout(location = 0) out vec4 fragColor;
 
 void main() {
-    vec4 color = texture(In, texCoord);
-    vec2 centered = (texCoord - vec2(0.5)) * vec2(1.0, ScreenSize.y / ScreenSize.x);
-    float distanceFromCenter = length(centered);
-    float vignette = 1.0 - smoothstep(0.28, 0.78, distanceFromCenter);
-    vignette = mix(0.12, 1.0, vignette);
+    vec4 color = texture(InSampler, texCoord);
+    vec2 p = (texCoord - vec2(0.5)) * vec2(1.0, InSize.y / max(InSize.x, 1.0));
+    float radius = length(p);
+    float vignette = 1.0 - smoothstep(0.22, 0.72, radius);
+    vignette = mix(0.08, 1.0, vignette);
     fragColor = vec4(color.rgb * vignette, color.a);
 }
