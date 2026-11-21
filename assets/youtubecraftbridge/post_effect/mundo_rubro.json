@@ -1,28 +1,13 @@
 {
-  "targets": [
-    "swap"
-  ],
+  "targets": {},
   "passes": [
     {
-      "vertex_shader": "minecraft:post/blit",
+      "vertex_shader": "minecraft:post/screenquad",
       "fragment_shader": "youtubecraftbridge:post/mundo_rubro",
       "inputs": [
         {
           "sampler_name": "In",
-          "target": "minecraft:main",
-          "bilinear": true
-        }
-      ],
-      "output": "swap"
-    },
-    {
-      "vertex_shader": "minecraft:post/blit",
-      "fragment_shader": "minecraft:post/blit",
-      "inputs": [
-        {
-          "sampler_name": "In",
-          "target": "swap",
-          "bilinear": true
+          "target": "minecraft:main"
         }
       ],
       "output": "minecraft:main"
